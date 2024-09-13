@@ -1,1 +1,68 @@
 Attempts to model AirportDelay as a temporal graph 
+
+
+
+# CSC-591-Final-Project
+
+Checking connection
+different hyperparam to train on 
+t time interval (orig 15 mins) 
+p distance of geo neighbor
+cancelation penalty current = 180(y_u^t)
+
+TODO:
+Create method which calc the distance between any two airports using us-airports.csv
+
+operational similarity:between two airports, sqrt(sum Timepoints(x_vt-x_ut)^2) xu being 1 airport and xv being another. 
+
+G^(t) graph of airport at time t (15 min interval) composed of (V, E^(T)) Where V is nodes rep an airport and E is the edge representing an air route at time t (the set of flights between two airports at time t) 
+A^(t) denotes a binary am of G at t where a_uv=1 is an air route 
+N(v)=(N_g(v), N_f(v)) N the set of neighbors N_g geographic neighbors N_f operational neighbors
+deg(v)=deg+1 indicating node v is self looped
+
+N_g(v)={u|d(z_u, z_v)<= p} given u is located less than p away from v it is a neighbor of v irrespective of routes
+
+N_f(v)={u|d(z_u, z_v)>p && a_uv ==1} given u is located more than p away from v and u and v share a route they are operational neighbors
+
+v us always a neighbor of itself in both sets
+
+(((May allow preprocessing to handle geo neighbors before training for each airport))) 
+
+y_u^t=(m_u^t 180min*q_u^t)/a_u^t
+y_u^t is avg delay at airport u at time t
+m_u^t is total dalay of departing flights from u from t-1 to t 
+q_u^t is canceled flights from u from t-1 to t(NOTE: may only be t) 
+a_u^t is all flights from u from t-1 to t
+X^t ={x_1^t,...x_N^t} \in \Real^N 
+represents the departure features of N airports at time t of which each element x_u^t=(x_u^(t-1), x_u^(t-1+w), x_u^(t-1+2w),...,x_u^t) records a seq of departure flight numbers at airport within time window w. 
+Y^t={y_1^t,y_2^t,...,y_N^t} \in \Real^N denotes the observation vector of N airports at time t of which each element y_t records the avg delay at the airport u during time (t-1, t) 
+
+OA<- input: airport network(directed graph which is multirelational incoming and outgoing relations and flights connect all airports NOTE: it is assumed that all carriers execute similar daily plans and thus a periodic flight pattern that indicates the propagation mechanism of flight delays) and departure features as input
+
+OA obtains rep vec of each node by recursively aggregating the features from the operational neighbors in an airport network
+h_v^l=SUM all u in N_f(v)(C_{vu}h_u^(l-1)W^l)
+for all opperational neighbors u of v sum the product of^
+where C_{vu} is in a typical GCN 1/(sqrt(deg(v)*deg(u))) **reminder deg is deg+1 for self loop.
+In a GAT(graph attention network) C is learned from the original data and assigns different levels of importance to different nodes in a neighborhood
+W^l is the trainable param 
+h_v^(0) is the original feature matrix 
+X={X^(1), X^(2),.., X^(T)} \in \Real ^{TxNxM} which records a a sequence of departure features within T time points 
+x_u^t=(x_u^(t-1), x_u^(t-1+w), x_u^(t-1+2w),...,x_u^t)
+X^t ={x_1^t,...x_N^t} \in \Real^N 
+X={X^(1), X^(2),.., X^(T)} \in \Real ^{TxNxM}
+I think this is the seq that builds to X
+
+h_u^(l-1) is previous rep vector 
+
+
+GEO aggregator
+operation similarity OS(x_v, x_u)= sqrt(sum t=1->T(x_{vt}-x_{ut})^2) x_{ut} and x{vt} == # of departures at time t
+
+small==more similar greater weight to more similar airports when extracting node features
+
+h_v^l=sum all geo neighbors of v(1/OS(x_v,x_u)(deg(v)deg(u))^(-1/2)h_u^(l-1)W^l)
+W is trainable param 
+deg=deg+1
+h_u^(l-1) is rep vec of prev layer
+
+H^l=af(alpha*)
